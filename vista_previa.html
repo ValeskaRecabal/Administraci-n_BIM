@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vista previa | Presupuesto y APU</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #183d32;
+      --muted: #6b7970;
+      --green: #367456;
+      --canvas: #f4f6f3;
+      --line: #e3e9e3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: #23332b;
+      font: 14px/1.5 "Segoe UI", Arial, sans-serif;
+    }
+    main { max-width: 1440px; margin: auto; padding: 28px 30px 48px; }
+    .hero {
+      padding: 25px 30px;
+      border-radius: 18px;
+      color: #f8faf8;
+      background: linear-gradient(115deg, #173b32, #28634e);
+      box-shadow: 0 12px 30px #173b321c;
+    }
+    .eyebrow { color: #c8dfd1; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 5px 0 3px; font-size: clamp(25px, 4vw, 36px); letter-spacing: -.03em; }
+    .hero p { margin: 0; color: #d3e4da; }
+    .notice {
+      margin: 16px 0 20px;
+      padding: 12px 15px;
+      border: 1px solid #e8d6a5;
+      border-radius: 10px;
+      background: #fff9e8;
+      color: #735a20;
+    }
+    .filters, .cards, .charts { display: grid; gap: 14px; }
+    .filters { grid-template-columns: minmax(240px, 1.3fr) minmax(190px, .7fr) auto; align-items: end; margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    select, button {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 12px;
+      border: 1px solid #d5ded6;
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+    }
+    button { width: auto; cursor: pointer; border-color: var(--green); background: var(--green); color: white; font-weight: 700; }
+    button:hover { background: #285d43; }
+    .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 22px; }
+    .card, .panel {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 5px 16px #1b372a0d;
+    }
+    .card { min-height: 124px; padding: 16px 18px; border-top: 4px solid var(--accent, var(--green)); }
+    .card-label { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+    .card-value { margin: 8px 0 4px; color: var(--ink); font-size: 23px; font-weight: 750; line-height: 1.25; }
+    .card-detail { color: #89938c; font-size: 12px; }
+    .charts { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); margin-bottom: 22px; }
+    .panel { padding: 18px; min-width: 0; }
+    h2 { margin: 0 0 3px; color: var(--ink); font-size: 18px; }
+    .subheading { margin: 0 0 18px; color: var(--muted); font-size: 12px; }
+    .bars { display: grid; gap: 11px; max-height: 410px; overflow: auto; padding-right: 5px; }
+    .bar-row { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(80px, 1.5fr) auto; align-items: center; gap: 10px; }
+    .bar-name { overflow: hidden; color: #35473c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .track { height: 12px; overflow: hidden; border-radius: 20px; background: #edf2ee; }
+    .fill { height: 100%; min-width: 2px; border-radius: inherit; background: linear-gradient(90deg, #4a8a67, #75ad79); }
+    .bar-value { color: var(--ink); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .legend { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 12px; color: var(--muted); font-size: 11px; }
+    .dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: #477ea8; }
+    .dot.machine { background: #8b68a6; }
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 12px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid #edf0ed; text-align: left; white-space: nowrap; }
+    th { position: sticky; top: 0; background: #f7f9f7; color: #56665b; font-size: 11px; text-transform: uppercase; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .empty { padding: 28px; color: var(--muted); text-align: center; }
+    footer { padding-top: 18px; color: #7a867e; font-size: 11px; text-align: center; }
+    @media (max-width: 900px) {
+      main { padding: 18px 14px 32px; }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .charts { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: 1fr 1fr; }
+      .filters button { grid-column: 1 / -1; }
+    }
+    @media (max-width: 540px) {
+      .cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .card { padding: 13px; }
+      .card-value { font-size: 18px; }
+      .bar-row { grid-template-columns: minmax(100px, 1fr) 1fr auto; gap: 6px; }
+      .filters { grid-template-columns: 1fr; }
+      .filters button { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Control de obra · Presupuesto y APU</div>
+      <h1>Centro Comunitario Pedro del Río Zañartu</h1>
+      <p>Costos, incidencia por partida y ocupación estimada de recursos</p>
+    </header>
+
+    <div class="notice">
+      <strong>Vista HTML de muestra:</strong> contiene un subconjunto de partidas observadas en el Excel para previsualizar la interfaz.
+      Para analizar el libro completo, ejecuta la aplicación interactiva <code>app.py</code>.
+    </div>
+
+    <section class="filters" aria-label="Filtros">
+      <div>
+        <label for="item-filter">Partida</label>
+        <select id="item-filter"><option value="">Todas las partidas de la muestra</option></select>
+      </div>
+      <div>
+        <label for="type-filter">Tipo de recurso</label>
+        <select id="type-filter">
+          <option value="">Todos los tipos</option>
+          <option value="Mano de obra">Mano de obra</option>
+          <option value="Maquinaria y equipos">Maquinaria y equipos</option>
+        </select>
+      </div>
+      <button id="download" type="button">Descargar CSV de la muestra</button>
+    </section>
+
+    <section class="cards" aria-label="Indicadores">
+      <article class="card" style="--accent:#3b7d5b">
+        <div class="card-label">Costo de la muestra</div>
+        <div class="card-value" id="kpi-cost">—</div>
+        <div class="card-detail">Suma de partidas mostradas</div>
+      </article>
+      <article class="card" style="--accent:#d18b36">
+        <div class="card-label">Partidas</div>
+        <div class="card-value" id="kpi-items">—</div>
+        <div class="card-detail">Incluidas en esta vista</div>
+      </article>
+      <article class="card" style="--accent:#477ea8">
+        <div class="card-label">Mano de obra</div>
+        <div class="card-value" id="kpi-labor">—</div>
+        <div class="card-detail">Tiempo según APU × cantidad del presupuesto</div>
+      </article>
+      <article class="card" style="--accent:#8b68a6">
+        <div class="card-label">Maquinaria</div>
+        <div class="card-value" id="kpi-machine">—</div>
+        <div class="card-detail">Tiempo según APU × cantidad del presupuesto</div>
+      </article>
+    </section>
+
+    <section class="charts">
+      <article class="panel">
+        <h2>Costo e incidencia por partida</h2>
+        <p class="subheading">Incidencia calculada sobre el costo de las partidas visibles</p>
+        <div class="bars" id="cost-chart"></div>
+      </article>
+      <article class="panel">
+        <h2>Ocupación por recurso</h2>
+        <p class="subheading">Tiempo total en días, calculado con la cantidad del presupuesto</p>
+        <div class="bars" id="time-chart"></div>
+        <div class="legend">
+          <span><i class="dot"></i>Mano de obra</span>
+          <span><i class="dot machine"></i>Maquinaria</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Partidas de la muestra</h2>
+      <p class="subheading">Valores extraídos de la hoja de presupuesto del archivo adjunto</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Ítem</th><th>Descripción</th><th>Unidad</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th></tr></thead>
+          <tbody id="budget-table"></tbody>
+        </table>
+      </div>
+    </section>
+    <footer>Previsualización HTML local · No reemplaza el análisis completo de app.py</footer>
+  </main>
+
+  <script>
+    const budget = [
+      { id: "1.1.1", name: "Permisos, proyectos y derechos municipales", unit: "GL", qty: 1, price: 2925000, total: 2925000 },
+      { id: "1.2.1", name: "Instalaciones provisionales", unit: "GL", qty: 1, price: 480078, total: 480078 },
+      { id: "1.2.2", name: "Construcciones provisionales", unit: "GL", qty: 1, price: 4625014, total: 4625014 },
+      { id: "1.3.1", name: "Limpieza y despeje de terreno", unit: "GL", qty: 1, price: 319272, total: 319272 },
+      { id: "1.3.2", name: "Replanteo, trazado y niveles", unit: "M2", qty: 293.2, price: 6088, total: 1785033 },
+      { id: "1.3.3", name: "Letrero de obras", unit: "U", qty: 1, price: 727275, total: 727275 },
+      { id: "1.3.4", name: "Escarpe, movimiento de tierra y transporte", unit: "U", qty: 30.23, price: 8601, total: 260012 },
+      { id: "1.3.5", name: "Trasplante de especies existentes", unit: "U", qty: 24, price: 20065, total: 481555 },
+      { id: "1.3.6", name: "Extracción de especies existentes", unit: "U", qty: 2, price: 22626, total: 45253 },
+      { id: "1.3.7", name: "Extracción de tronco existente", unit: "U", qty: 1, price: 21345, total: 21345 },
+      { id: "1.3.8", name: "Reubicación de bolardos", unit: "U", qty: 7, price: 8296, total: 58073 },
+      { id: "2.1", name: "Compactación de terreno natural", unit: "M2", qty: 162.6, price: 544, total: 88427 },
+      { id: "2.2", name: "Excavaciones", unit: "M3", qty: 98.87, price: 5518, total: 545588 }
+    ];
+    const resources = [
+      { item:"1.2.1", type:"Mano de obra", name:"Jornal (2)", rate:.30, qty:1 },
+      { item:"1.2.1", type:"Mano de obra", name:"Maestro eléctrico", rate:.22, qty:1 },
+      { item:"1.2.1", type:"Mano de obra", name:"Maestro gásfiter", rate:.30, qty:1 },
+      { item:"1.3.5", type:"Maquinaria y equipos", name:"Camión pluma", rate:.05, qty:24 },
+      { item:"1.3.5", type:"Mano de obra", name:"Jornal", rate:.09, qty:24 },
+      { item:"1.3.6", type:"Maquinaria y equipos", name:"Retroexcavadora", rate:.017, qty:2 },
+      { item:"1.3.6", type:"Maquinaria y equipos", name:"Camión tolva", rate:.01, qty:2 },
+      { item:"1.3.6", type:"Mano de obra", name:"Jornal", rate:.35, qty:2 },
+      { item:"1.3.7", type:"Maquinaria y equipos", name:"Retroexcavadora", rate:.08, qty:1 },
+      { item:"1.3.7", type:"Mano de obra", name:"Jornal", rate:.08, qty:1 },
+      { item:"1.3.8", type:"Mano de obra", name:"Jornal", rate:.12, qty:7 },
+      { item:"1.3.8", type:"Mano de obra", name:"Concretero", rate:.04, qty:7 },
+      { item:"2.1", type:"Maquinaria y equipos", name:"Rodillo doble tambor", rate:.002232142857, qty:162.6 },
+      { item:"2.1", type:"Mano de obra", name:"Jornal (2)", rate:.002232142857, qty:162.6 },
+      { item:"2.2", type:"Maquinaria y equipos", name:"Retroexcavadora", rate:.006, qty:98.87 },
+      { item:"2.2", type:"Maquinaria y equipos", name:"Placa compactadora", rate:.03, qty:98.87 },
+      { item:"2.2", type:"Maquinaria y equipos", name:"Camión tolva", rate:.01, qty:98.87 },
+      { item:"2.2", type:"Mano de obra", name:"Jornal", rate:.03, qty:98.87 }
+    ].map(row => ({ ...row, total: row.rate * row.qty }));
+
+    const money = value => "$ " + Math.round(value).toLocaleString("es-CL");
+    const number = value => value.toLocaleString("es-CL", { maximumFractionDigits: 2 });
+    const itemFilter = document.getElementById("item-filter");
+    const typeFilter = document.getElementById("type-filter");
+    const costChart = document.getElementById("cost-chart");
+    const timeChart = document.getElementById("time-chart");
+    const tableBody = document.getElementById("budget-table");
+
+    budget.forEach(row => {
+      const option = document.createElement("option");
+      option.value = row.id;
+      option.textContent = `${row.id} · ${row.name}`;
+      itemFilter.append(option);
+    });
+
+    function renderBars(target, rows, valueKey, labelFn, colorFn, formatter) {
+      if (!rows.length) {
+        target.innerHTML = '<div class="empty">No hay datos para estos filtros.</div>';
+        return;
+      }
+      const max = Math.max(...rows.map(row => row[valueKey]), 1);
+      target.innerHTML = rows.map(row => `
+        <div class="bar-row" title="${labelFn(row)}">
+          <div class="bar-name">${labelFn(row)}</div>
+          <div class="track"><div class="fill" style="width:${Math.max(1, row[valueKey] / max * 100)}%;background:${colorFn(row)}"></div></div>
+          <div class="bar-value">${formatter(row[valueKey])}</div>
+        </div>`).join("");
+    }
+
+    function update() {
+      const item = itemFilter.value;
+      const type = typeFilter.value;
+      const shownBudget = budget.filter(row => !item || row.id === item);
+      const shownResources = resources.filter(row =>
+        (!item || row.item === item) && (!type || row.type === type)
+      );
+      const total = shownBudget.reduce((sum, row) => sum + row.total, 0);
+      document.getElementById("kpi-cost").textContent = money(total);
+      document.getElementById("kpi-items").textContent = shownBudget.length;
+      for (const [category, target] of [["Mano de obra", "kpi-labor"], ["Maquinaria y equipos", "kpi-machine"]]) {
+        const days = shownResources.filter(row => row.type === category).reduce((sum, row) => sum + row.total, 0);
+        document.getElementById(target).textContent = `${number(days)} días`;
+      }
+
+      const incidenceBase = total || 1;
+      renderBars(
+        costChart,
+        [...shownBudget].sort((a, b) => b.total - a.total).map(row => ({ ...row, incidence: row.total / incidenceBase * 100 })),
+        "total",
+        row => `${row.id} · ${row.name} (${number(row.incidence)}%)`,
+        () => "#4b8a65",
+        money
+      );
+      const byResource = Object.values(shownResources.reduce((groups, row) => {
+        const key = `${row.type}|${row.name}`;
+        groups[key] ??= { name: row.name, type: row.type, total: 0 };
+        groups[key].total += row.total;
+        return groups;
+      }, {})).sort((a, b) => b.total - a.total);
+      renderBars(
+        timeChart,
+        byResource,
+        "total",
+        row => row.name,
+        row => row.type === "Mano de obra" ? "#477ea8" : "#8b68a6",
+        value => `${number(value)} d`
+      );
+      tableBody.innerHTML = shownBudget.map(row => `
+        <tr><td>${row.id}</td><td>${row.name}</td><td>${row.unit}</td>
+        <td class="num">${number(row.qty)}</td><td class="num">${money(row.price)}</td>
+        <td class="num">${money(row.total)}</td></tr>`).join("");
+    }
+
+    itemFilter.addEventListener("change", update);
+    typeFilter.addEventListener("change", update);
+    document.getElementById("download").addEventListener("click", () => {
+      const rows = budget.filter(row => !itemFilter.value || row.id === itemFilter.value);
+      const csv = [
+        ["Ítem", "Descripción", "Unidad", "Cantidad", "Precio unitario", "Total"],
+        ...rows.map(row => [row.id, row.name, row.unit, row.qty, row.price, row.total])
+      ].map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\r\n");
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+      link.download = "muestra_presupuesto.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+    update();
+  </script>
+</body>
+</html>
